@@ -1,26 +1,56 @@
-name: build.yml
+name: DUO Android Build
 
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: set up JDK 11
+    - name: Check out repository
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
-        java-version: '11'
+        java-version: '17'
         distribution: 'temurin'
-        cache: gradle
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-    - name: Build with Gradle
-      run: ./gradlew build
+    - name: Set up Gradle
+      uses: gradle/actions/setup-gradle@v3
+
+    - name: Unzip project
+      run: |
+        if [ -f DUO.zip ]; then
+          unzip DUO.zip
+        else
+          echo "DUO.zip not found!"
+          exit 1
+        fi
+
+    - name: Grant execute permission
+      run: |
+        if [ -f DUO/gradlew ]; then
+          chmod +x DUO/gradlew
+        fi
+
+    - name: Build Debug APK
+      run: |
+        cd DUO
+        if [ -f gradlew ]; then
+          ./gradlew assembleDebug --stacktrace
+        else
+          gradle assembleDebug --stacktrace
+        fi
+
+    - name: Upload Debug APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: duo-debug-apk
+        path: |
+          DUO/app/build/outputs/apk/debug/*.apk
+          app/build/outputs/apk/debug/*.apk
+          
